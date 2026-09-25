@@ -42,6 +42,25 @@ def buildMatrix(df):
 
     return matrix
 
+# bank lookup
+def loadMetadata(bankID):
+    # read the "List of Institutions"
+    inst = pd.read_excel(
+        f"data/TR_Metadata.xlsx",
+        sheet_name="List of Institutions",
+        header=1, #skip 1st row
+    )
+
+    # keep columns we actually need
+    inst = inst[["LEI_Code", "Name", "Country", "Country_code"]]
+
+    # keep banks in our exposure matrix
+    mask = inst["LEI_Code"].isin(bankID)                    # True/False: is this LEI in our list?
+    matchBanks = inst[mask]                                # keep only the True rows
+    matchBanks = matchBanks.reset_index(drop=True)     # renumber rows 0,1,2... cleanly
+
+    return matchBanks
+
 if __name__ == "__main__":
     df = filterExpose()
     print(df.head())
@@ -49,3 +68,5 @@ if __name__ == "__main__":
     matrix = buildMatrix(df)
     print(matrix.shape)
     print(matrix.head())
+    meta = pd.read_excel("data/TR_Metadata.xlsx", sheet_name=None)  # None = load every sheet
+    print(meta.keys())
