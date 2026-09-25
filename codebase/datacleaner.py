@@ -22,11 +22,30 @@ def filterExpose():
     startPeriod = df["Period"] == "202506" #starting period in the csv file
 
     df = df[startItem & startPeriod] 
-    df = df[df["NACE"] != 0] # if not a sector we remove it
+    df = df[df["NACE"] != "0"] # if not a sector we remove it
     df = df[df["LEI"].ne(PLACEHOLDER)]
     return df
+
+def buildMatrix(df):
+    # turns bank into table with one row per bank, one column per sector, filled with the exposure amount
+    matrix = df.pivot_table(
+        index="LEI",       # row
+        columns="NACE",   # column
+        values="Value",        # value
+        aggfunc="sum",          # if bank has more than one row for the same sector, add them up
+        fill_value=0.0,         # if a bank has no exposure to a sector, put 0 instead of leaving it blank
+    )
+
+    # pivot_table sorts columns as text so re-sort changesthem as numbers instead
+    reSort = sorted(matrix.columns, key=int)
+    matrix = matrix[reSort]
+
+    return matrix
 
 if __name__ == "__main__":
     df = filterExpose()
     print(df.head())
     print(len(df))
+    matrix = buildMatrix(df)
+    print(matrix.shape)
+    print(matrix.head())
