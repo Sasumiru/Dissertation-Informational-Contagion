@@ -43,7 +43,7 @@ def buildMatrix(df):
     return matrix
 
 # bank lookup
-def loadMetadata(bankID):
+def loadMeta(bankID):
     # read the "List of Institutions"
     inst = pd.read_excel(
         f"data/TR_Metadata.xlsx",
@@ -60,6 +60,46 @@ def loadMetadata(bankID):
     matchBanks = matchBanks.reset_index(drop=True)     # renumber rows 0,1,2... cleanly
 
     return matchBanks
+# runs the full pipeline and writes all four output CSVs
+
+def main():
+    check_data_files()
+
+    # load and filter the raw data
+    raw = filterExpose()
+    reportBanks = raw["LEI"].nunique()
+    matrix = buildMatrix(raw)
+
+    totalRow = matrix.sum(axis=1)
+    noExposure = totalRow == 0
+    zeroExpose = totalRow[noExposure].index #LEI list of banks with zero exposure
+    if len(zeroExpose):
+        print(f"Dropping {len(zeroExpose)} bank(s) with zero total sector exposure: {list(zeroExpose)}")
+        matrix = matrix.drop(index=zeroExpose)
+        totalRow = totalRow.drop(index=zeroExpose)
+
+    print(f"Final exposure matrix: {matrix.shape[0]} banks x {matrix.shape[1]} sectors.")
+    shares = matrix.div(totalRow, axis=0) # turn raw amounts into shares 
+
+    sim = cosine_similarity(shares.values) # give bank similatrity score
+    simdf = pd.DataFrame(sim, index=matrix.index, columns=matrix.index)
+
+    meta = loadMeta(matrix.index) # loadmetadata for banks in the exposure matrix
+    allBanks = set(matrix.index)  # all banks in the exposure matrix
+    knownBanks = set(meta["LEI"]) # known banks in the metadata
+    missingBanks = allBanks - knownBanks # missing banks in the metadata
+    if missingBanks:
+        print(f"Warning: {len(missingBanks)} banks with no metadata match: {missingBanks}")
+
+    # save all results
+    matrix.to_csv(f"output/bank_sector_exposure.csv")
+    shares.to_csv(f"output/bank_sector_shares.csv")
+    simdf.to_csv(f"output/similarity_matrix.csv")
+    meta.to_csv(f"output/bank_metadata.csv", index=False)
+
+    print(f"Wrote exposure matrix, shares, similarity matrix, and metadata to output/")
+    print(f"Item {"2521301"}, period {"202506"}: {reportBanks} banks report a nonzero-NACE exposure.")
+
 
 if __name__ == "__main__":
     df = filterExpose()
@@ -70,3 +110,4 @@ if __name__ == "__main__":
     print(matrix.head())
     meta = pd.read_excel("data/TR_Metadata.xlsx", sheet_name=None)  # None = load every sheet
     print(meta.keys())
+    main()
