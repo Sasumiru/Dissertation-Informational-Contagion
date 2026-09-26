@@ -52,7 +52,8 @@ def loadMeta(bankID):
     )
 
     # keep columns we actually need
-    inst = inst[["LEI_Code", "Name", "Country", "Country_code"]]
+    inst = inst[["LEI_Code", "Name", "Country", "Desc_country"]]
+
 
     # keep banks in our exposure matrix
     mask = inst["LEI_Code"].isin(bankID)                    # True/False: is this LEI in our list?
@@ -63,7 +64,7 @@ def loadMeta(bankID):
 # runs the full pipeline and writes all four output CSVs
 
 def main():
-    check_data_files()
+    # check_data_files()
 
     # load and filter the raw data
     raw = filterExpose()
@@ -98,7 +99,8 @@ def main():
     meta.to_csv(f"output/bank_metadata.csv", index=False)
 
     print(f"Wrote exposure matrix, shares, similarity matrix, and metadata to output/")
-    print(f"Item {"2521301"}, period {"202506"}: {reportBanks} banks report a nonzero-NACE exposure.")
+    print(f"Item 2521301, period 202506: {reportBanks} banks report a nonzero-NACE exposure.")
+
 
 
 if __name__ == "__main__":
