@@ -86,7 +86,7 @@ def main():
 
     meta = loadMeta(matrix.index) # loadmetadata for banks in the exposure matrix
     allBanks = set(matrix.index)  # all banks in the exposure matrix
-    knownBanks = set(meta["LEI"]) # known banks in the metadata
+    knownBanks = set(meta["LEI_Code"]) # known banks in the metadata
     missingBanks = allBanks - knownBanks # missing banks in the metadata
     if missingBanks:
         print(f"Warning: {len(missingBanks)} banks with no metadata match: {missingBanks}")
