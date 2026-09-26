@@ -3,7 +3,7 @@ import pandas as pd
 from sklearn.metrics.pairwise import cosine_similarity #iimports
 TEST1 = "test1" 
 DATA = "data" #
-PLACEHOLDER = "XXXXXXXXXXXXXX" 
+PLACEHOLDER = "XXXXXXXXXXXXXXXXXXXX"
 
 def filterExpose():
     column = ["LEI_Code", "Period", "Item", "NACE_codes", "Amount"] #defining the columns that match the csv
