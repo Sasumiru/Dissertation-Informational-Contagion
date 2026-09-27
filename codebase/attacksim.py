@@ -40,6 +40,20 @@ def summarise(result):
         "top10_share": top10Share,
     }
 
+def runAllBanks(sim, midpoint):
+    rows = []
+    for trigger in sim.index: #every bank gets a turn as the trigger
+        linear = runSim(sim, trigger, riskLinear, sensitivity=0.5)
+        convex = runSim(sim, trigger, riskConvex, k=2)
+        logistic = runSim(sim, trigger, riskLogistic, midpoint=midpoint, steepness=10)
+        rows.append({
+            "LEI_Code": trigger,
+            "top10_share_linear": summarise(linear)["top10_share"],
+            "top10_share_convex": summarise(convex)["top10_share"],
+            "top10_share_logistic": summarise(logistic)["top10_share"],
+        })
+    return pd.DataFrame(rows).set_index("LEI_Code")
+
 def main():
     sim = pd.read_csv(f"output/similarity_matrix.csv", index_col=0)
     print(f"Loaded similarity matrix: {sim.shape[0]} x {sim.shape[1]} banks")
@@ -60,7 +74,7 @@ def main():
         "logistic": runSim(sim, TESTBANK, riskLogistic, midpoint=midpoint, steepness=10),
     }
 
-    allRisk = pd.DataFrame({"similarity_to_trigger": sim.loc[TESTBANK].drop(index=TESTBANK)}) #risk columns line up on LEI
+    allRisk = pd.DataFrame({"similarity to trigger": sim.loc[TESTBANK].drop(index=TESTBANK)}) #risk columns line up on LEI
     summary = []
     for name, result in results.items():
         allRisk[f"risk_{name}"] = result["transmitted_risk"]
@@ -74,7 +88,7 @@ def main():
         print(result["transmitted_risk"].head().to_string())
 
     allRisk.index.name = "LEI_Code"
-    allRisk = allRisk.sort_values("similarity_to_trigger", ascending=False)
+    allRisk = allRisk.sort_values("similarity to trigger", ascending=False)
 
     summary = pd.DataFrame(summary).set_index("mapping")
     print(f"\n--- summary (even spread would be top10_share = {10 / len(allRisk):.3f}) ---")
@@ -88,6 +102,15 @@ def main():
     allRisk.to_csv(f"output/attack_single_test.csv")
     summary.to_csv(f"output/attack_mapping_summary.csv")
     print(f"\nSaved risk for {len(allRisk)} banks and mapping summary to output/")
+
+    # all banks as the trigger, one row per bank
+    allBanks = runAllBanks(sim, midpoint)
+    allBanks.to_csv(f"output/attack_results.csv")
+    print(f"\nSaved top10_share for {len(allBanks)} trigger banks to output/attack_results.csv")
+    print(allBanks.describe())
+    print("\ncorrelation between mappings:") #high = choice of mapping doesnt matter much
+    print(allBanks.corr())
+    print(allBanks.sort_values('top10share_logistic', ascending=False).head(3))
 
 
 if __name__ == "__main__":
