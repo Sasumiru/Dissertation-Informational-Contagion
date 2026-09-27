@@ -60,6 +60,31 @@ def loadMeta(bankID):
     matchBanks = inst[mask]                                # keep only the True rows
     matchBanks = matchBanks.reset_index(drop=True)     # renumber rows 0,1,2... cleanly
 
+    # capital + size from tr_oth
+    column = ["LEI_Code", "Period", "Item", "Amount"] #defining the columns that match the csv
+    strType = {
+        "LEI_Code": str,
+        "Period": str,
+        "Item": str,
+    }
+    capital = pd.read_csv(f"data/tr_oth.csv", usecols=column, dtype=strType) #reading the data
+    capital["Amount"] = pd.to_numeric(capital["Amount"], errors="coerce") #if number isnt number = blank
+
+    capItem = capital["Item"].isin(["2520140", "2520142", "2521010"]) #cet1 ratio, total capital ratio, total assets
+    capPeriod = capital["Period"] == "202506" #same period as the exposures
+    capital = capital[capItem & capPeriod]
+
+    # turns it into one row per bank, one column per item
+    capital = capital.pivot_table(
+        index="LEI_Code",      # row
+        columns="Item",       # column
+        values="Amount",       # value
+        aggfunc="first",        # only one value per bank per item anyway
+    )
+    capital = capital.rename(columns={"2520140": "cet1_ratio", "2520142": "total_capital_ratio", "2521010": "total_assets"}) #readable names
+
+    matchBanks = matchBanks.merge(capital, left_on="LEI_Code", right_index=True, how="left") # add capital onto each bank by LEI
+
     return matchBanks
 # runs the full pipeline and writes all four output CSVs
 
