@@ -49,28 +49,26 @@ def main():
     offDiag = sim.values[~np.eye(sim.shape[0], dtype=bool)] #every pair, no bank with itself
     midpoint = np.median(offDiag)
 
-    mappings = {
-        "linear": (riskLinear, {"sensitivity": 0.5}),
-        "convex": (riskConvex, {"k": 2}),
-        "logistic": (riskLogistic, {"midpoint": midpoint, "steepness": 10}),
+    # run each mapping
+    results = {
+        "linear": runSim(sim, TESTBANK, riskLinear, sensitivity=0.5),
+        "convex": runSim(sim, TESTBANK, riskConvex, k=2),
+        "logistic": runSim(sim, TESTBANK, riskLogistic, midpoint=midpoint, steepness=10),
     }
 
-    # run each mapping
-    allRisk = pd.DataFrame()
+    allRisk = pd.DataFrame({"similarity_to_trigger": sim.loc[TESTBANK].drop(index=TESTBANK)}) #risk columns line up on LEI
     summary = []
-    for name, (fn, params) in mappings.items():
-        result = runSim(sim, TESTBANK, fn, **params)
+    for name, result in results.items():
         allRisk[f"risk_{name}"] = result["transmitted_risk"]
         row = summarise(result)
         row["mapping"] = name
         summary.append(row)
 
-        print(f"\n--- {name} {params} ---")
+        print(f"\n--- {name} ---")
         print(f"Range: min={result['transmitted_risk'].min():.4f}, max={result['transmitted_risk'].max():.4f}")
         print("top 5 banks receiving risk:")
         print(result["transmitted_risk"].head().to_string())
 
-    allRisk.insert(0, "similarity_to_trigger", sim.loc[TESTBANK].drop(index=TESTBANK)) #lines up on LEI
     allRisk.index.name = "LEI_Code"
     allRisk = allRisk.sort_values("similarity_to_trigger", ascending=False)
 
