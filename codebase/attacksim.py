@@ -46,8 +46,12 @@ def main():
     print(f"Trigger bank: {TESTBANK} (in matrix: {TESTBANK in sim.index})")
 
     # logistic midpoint from the whole matrix so its the same curve whichever bank is the trigger
-    offDiag = sim.values[~np.eye(sim.shape[0], dtype=bool)] #every pair, no bank with itself
-    midpoint = np.median(offDiag)
+    pairs = []
+    banks = list(sim.index)
+    for i in range(len(banks)):
+        for j in range(i + 1, len(banks)): 
+            pairs.append(sim.iloc[i, j])
+    midpoint = np.median(pairs)
 
     # run each mapping
     results = {
