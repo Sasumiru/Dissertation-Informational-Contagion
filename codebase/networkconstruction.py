@@ -68,19 +68,23 @@ def main():
 
     print(f"Saved network metrics for {len(metrics)} banks to output/")
     top10 = metrics[["Name", "weighted_degree", "eigenvector", "pagerank", "cet1_ratio"]].head(10)
+    print("top 10 banks:")
     print(top10)
 
 if __name__ == "__main__":
     sys.stdout.reconfigure(encoding="utf-8") #so bank names with accents print
     sim = pd.read_csv(f"output/similarity_matrix.csv", index_col=0)
     sim.columns = sim.index
-    print(sim.shape)
+    print("sim shape:", sim.shape)
+    print("sim first 5x5:")
     print(sim.iloc[:5, :5])
-    print(sim.isna().sum().sum()) #should be 0
+    print("sim NaNs:", sim.isna().sum().sum()) #should be 0
     G = buildGraph(sim)
-    print(G.number_of_nodes(), G.number_of_edges())
+    print("nodes, edges:", G.number_of_nodes(), G.number_of_edges())
     centrality = findCentrality(G)
+    print("centrality head:")
     print(centrality.head())
+    print("centrality summary:")
     print(centrality.describe())
-    print(centrality["pagerank"].sum()) #should be 1
+    print("pagerank sum:", centrality["pagerank"].sum()) #should be 1
     main()
