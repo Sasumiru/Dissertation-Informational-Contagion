@@ -54,8 +54,10 @@ def main():
     centrality = findCentrality(G)
 
     # second network with only the top 25% of edges, so centrality isnt built from the same numbers as the DV
-    weights = [data["weight"] for a, b, data in G.edges(data=True)]
-    cutoff = pd.Series(weights).quantile(0.75)
+    weights = []
+    for a, b, data in G.edges(data=True):
+        weights.append(data["weight"])
+    cutoff = pd.Series(weights).quantile(0.75) #75th percentile, so the top 25% of edges stay
     GThresh = buildGraph(sim, cutoff)
     print(f"Thresholded graph (similarity >= {cutoff:.3f}) has {GThresh.number_of_edges()} edges")
 

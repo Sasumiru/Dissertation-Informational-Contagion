@@ -3,15 +3,13 @@ import numpy as np
 import pandas as pd
 import statsmodels.api as sm
 from sklearn.linear_model import LogisticRegression
-from sklearn.metrics import roc_auc_score
-from sklearn.model_selection import LeaveOneOut, cross_val_predict #imports
+from sklearn.metrics import roc_auc_score #imports
 sys.stdout.reconfigure(encoding="utf-8")
 
 
-DV = "top10_share_logistic" #swap to _linear or _convex for the robustness check
+MAPPINGS = ["logistic", "convex", "linear"] #logistic is the main one, other two are the robustness check
 CENTRALITIES = ["weighted_degree", "betweenness", "eigenvector", "pagerank"]
 CONTROLS = ["cet1_ratio", "log_assets"]
-NETWORKS = {"complete": "", "thresholded": "_thresh"} #column suffix for each network
 
 # municipal funding agencies, not normal commercial banks so they get dropped in the robustness check
 AGENCIES = {
@@ -31,31 +29,50 @@ def loadData():
 def standardise(data, cols):
     return (data[cols] - data[cols].mean()) / data[cols].std() #so coefficients are comparable
 
-def runOLS(data, centrality):
+def runOLS(data, centrality, dv):
     cols = [centrality] + CONTROLS
-    X = sm.add_constant(standardise(data, cols))
-    y = data[DV]
+    X = standardise(data, cols)
+    X = sm.add_constant(X) #adds the intercept
+    y = data[dv]
     model = sm.OLS(y, X).fit(cov_type="HC1") #robust standard errors
     return model
 
-def runClassifier(data, centrality):
+def runClassifier(data, centrality, dv):
     cols = [centrality] + CONTROLS
     X = standardise(data, cols)
-    y = (data[DV] > data[DV].median()).astype(int) #1 = more concentrated than the median bank
+    y = data[dv] > data[dv].median() #True = more concentrated than the median bank
+    y = y.astype(int) #True/False to 1/0
 
-    # leave one out, train on every other bank and predict the one left out
-    # cant get an auc from one bank so collect all the predictions first then score them together
-    probs = cross_val_predict(LogisticRegression(), X, y, cv=LeaveOneOut(), method="predict_proba")[:, 1]
-    return roc_auc_score(y, probs)
+    # leave one out: take one bank out, train on the rest, predict the one taken out, repeat for every bank
+    probs = []
+    for i in range(len(X)):
+        trainX = X.drop(X.index[i])
+        trainY = y.drop(y.index[i])
+        testX = X.iloc[[i]] #double brackets so it stays a table with one row
 
-def runAll(data, sampleName):
+        clf = LogisticRegression()
+        clf.fit(trainX, trainY)
+        prob = clf.predict_proba(testX)[0][1] #chance this bank is a 1
+        probs.append(prob)
+
+    # cant get an auc from one bank so score all the predictions together at the end
+    auc = roc_auc_score(y, probs)
+    return auc
+
+def runAll(data, sampleName, mapping):
+    dv = "top10_share_" + mapping
     rows = []
-    for network, suffix in NETWORKS.items():
+    for network in ["complete", "thresholded"]:
         for centrality in CENTRALITIES: #one model each, they are too correlated to go in together
-            col = centrality + suffix
-            model = runOLS(data, col)
-            auc = runClassifier(data, col)
+            if network == "complete":
+                col = centrality
+            else:
+                col = centrality + "_thresh"
+
+            model = runOLS(data, col, dv)
+            auc = runClassifier(data, col, dv)
             rows.append({
+                "mapping": mapping,
                 "sample": sampleName,
                 "network": network,
                 "centrality": centrality,
@@ -73,32 +90,47 @@ def runAll(data, sampleName):
 
 def main():
     data = loadData()
-    print(f"Loaded {len(data)} banks, DV = {DV}")
+    print(f"Loaded {len(data)} banks")
 
-    missing = [name for lei, name in AGENCIES.items() if lei not in data.index]
-    if len(missing):
-        print(f"agencies not found in data: {missing}")
+    for lei in AGENCIES:
+        if lei not in data.index:
+            print(f"agency not found in data: {AGENCIES[lei]}")
 
     # collinearity check
-    for network, suffix in NETWORKS.items():
-        cols = [c + suffix for c in CENTRALITIES]
-        print(f"\n--- correlation between centralities, {network} network ---")
-        print(data[cols].corr().round(2).to_string())
+    print("\n--- correlation between centralities, complete network ---")
+    print(data[CENTRALITIES].corr().round(2))
+    threshCols = []
+    for centrality in CENTRALITIES:
+        threshCols.append(centrality + "_thresh")
+    print("\n--- correlation between centralities, thresholded network ---")
+    print(data[threshCols].corr().round(2))
 
-    # full sample then without the agencies
-    full = runAll(data, "full")
-    noAgencies = runAll(data.drop(index=list(AGENCIES), errors="ignore"), "no_agencies")
-    results = pd.concat([full, noAgencies])
+    noAgencyData = data.drop(index=list(AGENCIES)) #same data without the 4 agencies
 
+    # run every model for every mapping, full sample and without the agencies
+    allResults = []
+    for mapping in MAPPINGS:
+        allResults.append(runAll(data, "full", mapping))
+        allResults.append(runAll(noAgencyData, "no_agencies", mapping))
+    allResults = pd.concat(allResults)
+
+    # main results are the logistic mapping
+    mainResults = allResults[allResults["mapping"] == "logistic"]
     pd.set_option("display.width", 200)
-    print("\n--- full sample ---")
-    print(full.drop(columns="sample").round(3).to_string(index=False))
-    print("\n--- without the 4 agencies ---")
-    print(noAgencies.drop(columns="sample").round(3).to_string(index=False))
+    print("\n--- logistic mapping (main results) ---")
+    print(mainResults.round(3).to_string(index=False))
+
+    # mapping robustness, only the thresholded network matters since the complete one is inflated
+    thresh = allResults[allResults["network"] == "thresholded"]
+    thresh = thresh.sort_values(["centrality", "mapping", "sample"])
+    print("\n--- mapping robustness, thresholded network ---")
+    print(thresh[["centrality", "mapping", "sample", "coef_centrality", "p_centrality"]].round(3).to_string(index=False))
 
     # save results
-    results.to_csv(f"output/regression_results.csv", index=False)
-    print(f"\nSaved {len(results)} models to output/regression_results.csv")
+    mainResults.to_csv(f"output/regression_results.csv", index=False)
+    allResults.to_csv(f"output/mapping_robustness.csv", index=False)
+    print(f"\nSaved {len(mainResults)} models to output/regression_results.csv")
+    print(f"Saved {len(allResults)} models to output/mapping_robustness.csv")
 
 
 if __name__ == "__main__":
