@@ -3,6 +3,7 @@ import sys
 import networkx as nx
 import pandas as pd
 from datacleaner import loadMeta
+from sklearn.metrics.pairwise import cosine_similarity #iimports
 
 def buildGraph(sim):
     G = nx.Graph() #empty graph
