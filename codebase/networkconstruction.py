@@ -5,7 +5,7 @@ import pandas as pd
 from datacleaner import loadMeta
 from sklearn.metrics.pairwise import cosine_similarity #iimports
 
-def buildGraph(sim):
+def buildGraph(sim, cutoff=0):
     G = nx.Graph() #empty graph
     G.add_nodes_from(sim.index) #one node per bank
 
@@ -14,7 +14,8 @@ def buildGraph(sim):
         for j in range(i + 1, len(banks)): #start after i so each pair only goes in once
             a = banks[i]
             b = banks[j]
-            G.add_edge(a, b, weight=sim.loc[a, b]) #edge weight is the similarity score
+            if sim.loc[a, b] >= cutoff: #cutoff 0 keeps every edge
+                G.add_edge(a, b, weight=sim.loc[a, b]) #edge weight is the similarity score
 
     return G
 
@@ -51,6 +52,16 @@ def main():
     print(f"Graph has {G.number_of_nodes()} banks and {G.number_of_edges()} edges")
 
     centrality = findCentrality(G)
+
+    # second network with only the top 25% of edges, so centrality isnt built from the same numbers as the DV
+    weights = [data["weight"] for a, b, data in G.edges(data=True)]
+    cutoff = pd.Series(weights).quantile(0.75)
+    GThresh = buildGraph(sim, cutoff)
+    print(f"Thresholded graph (similarity >= {cutoff:.3f}) has {GThresh.number_of_edges()} edges")
+
+    centralityThresh = findCentrality(GThresh).add_suffix("_thresh") #weighted_degree_thresh etc
+    centrality = centrality.join(centralityThresh)
+
     meta = loadMeta(sim.index) #bank names, country and capital
     meta = meta.set_index("LEI_Code") #LEI as the index so it lines up with centrality
 

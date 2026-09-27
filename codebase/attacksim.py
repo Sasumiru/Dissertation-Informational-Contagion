@@ -110,7 +110,7 @@ def main():
     print(allBanks.describe())
     print("\ncorrelation between mappings:") #high = choice of mapping doesnt matter much
     print(allBanks.corr())
-    print(allBanks.sort_values('top10share_logistic', ascending=False).head(3))
+    print(allBanks.sort_values('top10_share_logistic', ascending=False).head(3))
 
 
 if __name__ == "__main__":
