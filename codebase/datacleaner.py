@@ -6,15 +6,17 @@ DATA = "data" #
 PLACEHOLDER = "XXXXXXXXXXXXXXXXXXXX"
 
 def filterExpose():
-    column = ["LEI_Code", "Period", "Item", "NACE_codes", "Amount"] #defining the columns that match the csv
+    column = ["LEI_Code", "Period", "Item", "Perf_Status", "NACE_codes", "Amount"]
     strType = {
         "LEI_Code": str,
         "Period": str,
         "Item": str,
+        "Perf_Status": str,
         "NACE_codes": str,
     }
     df = pd.read_csv(f"data/tr_cre.csv", usecols=column, dtype=strType) #reading the data
     df = df.rename(columns={"LEI_Code": "LEI", "NACE_codes": "NACE", "Amount": "Value"}) #shorter names
+    df = df[df["Perf_Status"] == "0"]  # keep only the total row, the other three are parts of it
 
     df["Value"] = pd.to_numeric(df["Value"], errors="coerce").fillna(0) #if number isnt number = 0
 

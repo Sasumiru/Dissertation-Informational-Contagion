@@ -19,17 +19,20 @@ def riskConvex(sim, k=2):
 def riskLogistic(sim, midpoint=0.5, steepness=10):
     return 1 / (1 + np.exp(-steepness * (sim - midpoint))) #s shaped, never exactly 0 or 1
 
-def runSim(sim: pd.DataFrame, trigger: str, mappingFn, **kwargs) -> pd.DataFrame:
-    similarity = sim.loc[trigger].drop(index=trigger)
-    assert similarity.between(0, 1).all(), "similarity out of [0,1]" #negatives would break sim ** k
-    risk = mappingFn(similarity, **kwargs)
-    assert risk.between(0, 1).all(), "risk out of [0,1]"
+def runSim(sim, trigger, mappingFn, **kwargs):
+    similarity = sim.loc[trigger].drop(index=trigger) #trigger banks row, without itself
+    assert similarity.between(0, 1).all(), "similarity not between 0 and 1" #negatives would break sim ** k
+
+    risk = mappingFn(similarity, **kwargs) #kwargs are the settings for that mapping
+    assert risk.between(0, 1).all(), "risk not between 0 and 1"
+
     result = pd.DataFrame({
         "similarity_to_trigger": similarity,
         "transmitted_risk": risk,
     })
     result.index.name = "LEI_Code"
-    return result.sort_values("transmitted_risk", ascending=False)
+    result = result.sort_values("transmitted_risk", ascending=False) #most risk first
+    return result
 
 def summarise(result):
     risk = result["transmitted_risk"]
