@@ -3,7 +3,7 @@
 ## 1. Run summary
 
 - Date: 2026-10-27
-- Git commit (code): `e19ae586d10d2d468c4996bcea8dbb832413a817` on branch `final-analysis`
+- Git commit (code): `e2fd3a800146c95d82b7c6900a7f600d84d25baf` on branch `final-analysis`
 - Number of banks: 107 (pairs: 5671)
 - Mapping: logistic, f(s) = 1 / (1 + exp(-10(s - s0))); robustness linear 0.5*s and convex s^2
 - s0 (median off-diagonal similarity) = 0.6508
@@ -409,10 +409,12 @@ Values used: n = 107 banks, s0 = 0.6508, tau = 0.9442, strong-link cut-off = 0.8
 
 ## 8. Figures
 
-- `output/figures/total_reach_hist.png`: Histogram of total reach across the 107 trigger banks (main spec), 5-bank bins.
-- `output/figures/exposure_hist.png`: Histogram of exposure across the 107 banks (main spec), 5-simulation bins.
-- `output/figures/centrality_vs_indirect.png`: Four-panel scatter of each strong-link centrality measure against indirect reach (main spec).
-- `output/figures/top10_direct_indirect.png`: Stacked bars of direct and indirect reach for the top-10 banks by total reach, including all banks tied at 10th place (main spec).
+- `output/figures/fig4_1_reach_all_triggers.png`: Direct and indirect reach of all 107 trigger banks, sorted by total reach; the grey band marks triggers whose cascade never starts.
+- `output/figures/fig4_2_exposure_all_banks.png`: Exposure of all 107 banks, sorted from most to least exposed; grey bars are banks never distressed.
+- `output/figures/fig4_3_centrality_vs_indirect.png`: Four-panel scatter of each strong-link centrality measure against indirect reach, with Spearman and partial rho in each panel; hollow markers have indirect reach 0.
+- `output/figures/total_reach_hist.png`: Histogram of total reach across the 107 trigger banks, 5-bank bins.
+- `output/figures/exposure_hist.png`: Histogram of exposure across the 107 banks, 5-simulation bins.
+- `output/figures/top10_direct_indirect.png`: Stacked bars of direct and indirect reach for the top-10 banks by total reach, including all banks tied at 10th place.
 
 ## 9. Plain-English summary
 
