@@ -1,5 +1,5 @@
 Determinism check (validation check 5b)
-Code commit: 4cfb96d6b6e82e5f9db38aa7bc6f2ddc5603ae6a
+Code commit: e19ae586d10d2d468c4996bcea8dbb832413a817
 Procedure: deleted every generated output, ran 'python codebase/multiround.py' then 'python codebase/analysis.py', hashed all outputs (SHA-256); repeated from scratch; compared.
 Files compared: 47
 Result: PASS (all files byte-identical between run 1 and run 2)
@@ -11,7 +11,7 @@ de53b0391e37b3609bbb4cc908023e0e443b8effbc045b4e6e0a2357b30cf4fb *output/figures
 09acd60009ea7a0867f8a3bbee9e5b74007bf7dd605e999994d1a6d5869442e3 *output/figures/top10_direct_indirect.png
 a04fd0a0b70fd432ddf6c0521d30a47fe1b2e11e510afeb2f8cfa66684e68a18 *output/figures/total_reach_hist.png
 528babb84995f7bd8e1829e244e3fddbf273d3c5764a71f3789ad8fd0ae0c12c *output/reach_exposure_main.csv
-6350b2159564c84552573abb127e5a1daf2fe8c9a062c6d7da82ff433ddba1ca *output/results_report.md
+0278cffefda5c2d4c39eb07f79940308ac33277e88a1379d9ca74f1028d51deb *output/results_report.md
 afd18165a3299bd3773235bed99dc33c4bf23b05f15945094c6c2f9327c2d7ea *output/robustness/complete_centrality.csv
 4a60facea13e5969c743b954438dd63213ccb6119057fbcd9eff56afca6ccf8e *output/robustness/delta_0.3.csv
 69da67c0f8054b66fb0a4f9ba2147f1b1d4b8843d6ae0eacdb9ee38478306e50 *output/robustness/delta_0.7.csv

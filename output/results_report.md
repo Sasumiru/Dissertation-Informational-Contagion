@@ -3,7 +3,7 @@
 ## 1. Run summary
 
 - Date: 2026-10-27
-- Git commit (code): `4cfb96d6b6e82e5f9db38aa7bc6f2ddc5603ae6a` on branch `final-analysis` (WARNING: uncommitted changes in codebase/)
+- Git commit (code): `e19ae586d10d2d468c4996bcea8dbb832413a817` on branch `final-analysis`
 - Number of banks: 107 (pairs: 5671)
 - Mapping: logistic, f(s) = 1 / (1 + exp(-10(s - s0))); robustness linear 0.5*s and convex s^2
 - s0 (median off-diagonal similarity) = 0.6508
