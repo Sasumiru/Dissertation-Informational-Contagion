@@ -7,6 +7,7 @@ import pandas as pd
 import matplotlib
 matplotlib.use("Agg") #no window, just save the png
 import matplotlib.pyplot as plt
+from matplotlib.ticker import MaxNLocator
 from scipy import stats
 import multiround as mr #imports
 sys.stdout.reconfigure(encoding="utf-8")
@@ -39,6 +40,19 @@ ORANGE = "#eb6834"
 INK = "#0b0b0b"
 MUTED = "#898781"
 GRID = "#e6e5e1"
+SHADE = "#efeeeb" #background band behind banks that are never hit
+NOTE_INK = "#52514e" #annotation text
+FIG_WIDTH = 6.5 #inches, fits the page width so text prints at its real size
+
+# one style for every figure
+plt.rcParams.update({
+    "font.family": "DejaVu Sans",
+    "font.size": 9,
+    "axes.labelsize": 9,
+    "axes.labelcolor": INK,
+    "xtick.labelsize": 8,
+    "ytick.labelsize": 8,
+})
 
 CENT_LABELS = {
     "weighted_degree": "Weighted degree",
@@ -377,12 +391,19 @@ def styleAxes(ax):
         ax.spines[side].set_visible(False)
     for side in ["left", "bottom"]:
         ax.spines[side].set_color(MUTED)
-    ax.tick_params(colors=INK, labelsize=9)
+    ax.tick_params(colors=INK)
     ax.grid(axis="y", color=GRID, linewidth=0.8)
     ax.set_axisbelow(True)
 
+def saveFig(fig, path):
+    fig.savefig(path, dpi=DPI, facecolor="white")
+    plt.close(fig)
+
+def note(ax, x, y, text, **kwargs):
+    ax.text(x, y, text, fontsize=8, color=NOTE_INK, **kwargs)
+
 def histogram(series, xlabel, ylabel, path, maxVal):
-    fig, ax = plt.subplots(figsize=(6.5, 4))
+    fig, ax = plt.subplots(figsize=(FIG_WIDTH, 3.4))
     bins = np.arange(0, maxVal + 6, 5) #5 bank wide bins
     ax.hist(series, bins=bins, color=BLUE, edgecolor="white", linewidth=1)
     ax.set_xlabel(xlabel, color=INK)
@@ -390,54 +411,129 @@ def histogram(series, xlabel, ylabel, path, maxVal):
     ax.set_xlim(0, bins[-1])
     styleAxes(ax)
     fig.tight_layout()
-    fig.savefig(path, dpi=DPI, facecolor="white")
-    plt.close(fig)
+    saveFig(fig, path)
 
-def scatterPanels(table, path):
-    fig, axes = plt.subplots(2, 2, figsize=(8, 6.5))
-    for ax, cent in zip(axes.flat, mr.CENTRALITIES):
-        ax.scatter(table[cent], table["indirect_reach"], s=18, color=BLUE, edgecolor="white", linewidth=0.5)
-        ax.set_xlabel(f"{CENT_LABELS[cent]} centrality (strong-link network)", color=INK)
-        ax.set_ylabel("Indirect reach (banks)", color=INK)
-        styleAxes(ax)
-        ax.grid(axis="x", color=GRID, linewidth=0.8)
+def reachAllTriggers(table, path):
+    d = table.sort_values(["total_reach", "direct_reach"], ascending=False).reset_index(drop=True)
+    n = len(d)
+    top = n - 1 #most banks a trigger can distress
+    x = np.arange(n)
+    fig, ax = plt.subplots(figsize=(FIG_WIDTH, 3.4))
+    ax.bar(x, d["direct_reach"], width=0.85, color=BLUE, label="Direct reach (round 1)")
+    ax.bar(x, d["indirect_reach"], bottom=d["direct_reach"], width=0.85, color=ORANGE,
+           label="Indirect reach (round 2 onwards)")
+
+    started = int((d["total_reach"] > 0).sum())
+    if started < n: #grey band over triggers whose cascade never starts
+        ax.axvspan(started - 0.5, n - 0.5, color=SHADE, lw=0)
+        note(ax, (started + n) / 2 - 0.5, top * 0.42, f"{n - started} banks:\ncascade\nnever starts",
+             ha="center", va="center")
+
+    best = d.iloc[0]
+    ax.annotate(f"{best['Name']}:\n{best['direct_reach']} direct, {best['indirect_reach']} indirect",
+                xy=(0, best["total_reach"]), xytext=(n * 0.17, top * 0.98), fontsize=8, color=NOTE_INK,
+                arrowprops=dict(arrowstyle="-", color=NOTE_INK, lw=0.8))
+    ax.set_xlim(-1, n)
+    ax.set_ylim(0, top * 1.06)
+    ax.set_xticks([])
+    ax.set_xlabel("Trigger banks, ordered from highest to lowest total reach")
+    ax.set_ylabel("Banks distressed")
+    styleAxes(ax)
+    ax.legend(frameon=False, loc="lower right", bbox_to_anchor=(1, 1), ncol=2, fontsize=8) #above the plot, clear of the band
     fig.tight_layout()
-    fig.savefig(path, dpi=DPI, facecolor="white")
-    plt.close(fig)
+    saveFig(fig, path)
+
+def exposureAllBanks(table, path):
+    e = table.sort_values(["exposure", "Name"], ascending=[False, True]).reset_index(drop=True)
+    n = len(e)
+    never = e["exposure"] == 0
+    fig, ax = plt.subplots(figsize=(FIG_WIDTH, 3.0))
+    ax.bar(np.arange(n), e["exposure"], width=0.85, color=np.where(never, MUTED, BLUE))
+
+    most = e.iloc[0]
+    tiedTop = int((e["exposure"] == most["exposure"]).sum())
+    label = f"{most['Name']}: most exposed ({most['exposure']})" if tiedTop == 1 else \
+        f"Most exposed: {most['exposure']} ({tiedTop} banks)"
+    if tiedTop == 1 and most["total_reach"] == 0:
+        label += ",\nbut total reach of 0" #true here, checked rather than assumed
+    ax.annotate(label, xy=(0, most["exposure"]), xytext=(n * 0.09, (n - 1) * 0.87), fontsize=8,
+                color=NOTE_INK, arrowprops=dict(arrowstyle="-", color=NOTE_INK, lw=0.8))
+
+    nNever = int(never.sum())
+    if nNever:
+        ax.axvspan(n - nNever - 0.5, n - 0.5, color=SHADE, lw=0)
+        noLinks = (e.loc[never, "weighted_degree"] == 0).all() #weighted degree 0 = no strong links
+        why = " with no strong links" if noLinks else ""
+        note(ax, n - 0.5, (n - 1) * 0.87, f"Grey: {nNever} banks{why},\nnever distressed", ha="right", va="top")
+    ax.set_xlim(-1, n + 0.5)
+    ax.set_ylim(0, (n - 1) * 0.95)
+    ax.set_xticks([])
+    ax.set_xlabel("Banks, ordered from most to least exposed")
+    ax.set_ylabel("Simulations in which\nthe bank is distressed")
+    styleAxes(ax)
+    fig.tight_layout()
+    saveFig(fig, path)
+
+def centralityScatter(table, rq3Main, path):
+    order = rq3Main.sort_values("partial_rho", ascending=False)["centrality"] #strongest panel first
+    zero = table["indirect_reach"] == 0
+    fig, axes = plt.subplots(2, 2, figsize=(FIG_WIDTH, 5.2))
+    for ax, cent in zip(axes.flat, order):
+        ax.scatter(table.loc[~zero, cent], table.loc[~zero, "indirect_reach"], s=14, color=BLUE, alpha=0.85,
+                   lw=0, label="Indirect reach > 0")
+        ax.scatter(table.loc[zero, cent], table.loc[zero, "indirect_reach"], s=14, facecolor="none",
+                   edgecolor=MUTED, lw=0.7, label="Indirect reach = 0")
+        r = rq3Main.set_index("centrality").loc[cent]
+        ax.text(0.97, 0.30, f"ρ = {fmtR(r['spearman_rho'])}\npartial ρ = {fmtR(r['partial_rho'])}",
+                transform=ax.transAxes, ha="right", va="center", fontsize=8, color=INK) #sits in the empty band between 0 and the first nonzero reach
+        ax.set_xlabel(f"{CENT_LABELS[cent]} (strong-link network)")
+        ax.set_ylim(-5, (len(table) - 1) * 0.95)
+        ax.ticklabel_format(axis="x", style="plain")
+        ax.xaxis.set_major_locator(MaxNLocator(4))
+        styleAxes(ax)
+    for ax in axes[:, 0]:
+        ax.set_ylabel("Indirect reach (banks)")
+    handles, labels = axes[0, 0].get_legend_handles_labels()
+    fig.legend(handles, labels, loc="upper center", ncol=2, frameon=False, fontsize=8)
+    fig.tight_layout(rect=(0, 0, 1, 0.95))
+    saveFig(fig, path)
 
 def topBars(table, path):
     top = rankedTable(table, "total_reach").iloc[::-1] #highest at the top of the chart
-    fig, ax = plt.subplots(figsize=(7, 0.38 * len(top) + 1.2))
+    fig, ax = plt.subplots(figsize=(FIG_WIDTH, 0.3 * len(top) + 1.2))
     y = np.arange(len(top))
-    ax.barh(y, top["direct_reach"], color=BLUE, edgecolor="white", linewidth=1, label="Direct reach (round 1)")
-    ax.barh(y, top["indirect_reach"], left=top["direct_reach"], color=ORANGE, edgecolor="white", linewidth=1,
-            label="Indirect reach (round 2+)")
+    ax.barh(y, top["direct_reach"], height=0.75, color=BLUE, label="Direct reach (round 1)")
+    ax.barh(y, top["indirect_reach"], left=top["direct_reach"], height=0.75, color=ORANGE,
+            label="Indirect reach (round 2 onwards)")
     ax.set_yticks(y)
-    ax.set_yticklabels(top["Name"], fontsize=8)
-    ax.set_xlabel("Number of banks distressed", color=INK)
-    ax.set_ylabel("Trigger bank", color=INK)
+    ax.set_yticklabels(top["Name"])
+    ax.set_ylim(-0.6, len(top) - 0.4)
+    ax.set_xlabel("Banks distressed")
     styleAxes(ax)
     ax.grid(axis="y", visible=False)
     ax.grid(axis="x", color=GRID, linewidth=0.8)
     ax.legend(frameon=False, fontsize=8, loc="lower right", bbox_to_anchor=(1, 1), ncol=2) #above the bars
     fig.tight_layout()
-    fig.savefig(path, dpi=DPI, facecolor="white")
-    plt.close(fig)
+    saveFig(fig, path)
 
-def makeFigures(mainT):
+def makeFigures(mainT, rq3Main):
     os.makedirs(FIG_DIR, exist_ok=True)
     n = len(mainT)
     files = {
-        "total_reach_hist.png": "Histogram of total reach across the 107 trigger banks (main spec), 5-bank bins.",
-        "exposure_hist.png": "Histogram of exposure across the 107 banks (main spec), 5-simulation bins.",
-        "centrality_vs_indirect.png": "Four-panel scatter of each strong-link centrality measure against indirect reach (main spec).",
-        "top10_direct_indirect.png": "Stacked bars of direct and indirect reach for the top-10 banks by total reach, including all banks tied at 10th place (main spec).",
+        "fig4_1_reach_all_triggers.png": f"Direct and indirect reach of all {n} trigger banks, sorted by total reach; the grey band marks triggers whose cascade never starts.",
+        "fig4_2_exposure_all_banks.png": f"Exposure of all {n} banks, sorted from most to least exposed; grey bars are banks never distressed.",
+        "fig4_3_centrality_vs_indirect.png": "Four-panel scatter of each strong-link centrality measure against indirect reach, with Spearman and partial rho in each panel; hollow markers have indirect reach 0.",
+        "total_reach_hist.png": f"Histogram of total reach across the {n} trigger banks, 5-bank bins.",
+        "exposure_hist.png": f"Histogram of exposure across the {n} banks, 5-simulation bins.",
+        "top10_direct_indirect.png": "Stacked bars of direct and indirect reach for the top-10 banks by total reach, including all banks tied at 10th place.",
     }
+    reachAllTriggers(mainT, f"{FIG_DIR}/fig4_1_reach_all_triggers.png")
+    exposureAllBanks(mainT, f"{FIG_DIR}/fig4_2_exposure_all_banks.png")
+    centralityScatter(mainT, rq3Main, f"{FIG_DIR}/fig4_3_centrality_vs_indirect.png")
     histogram(mainT["total_reach"], "Total reach (banks distressed)", "Number of trigger banks",
               f"{FIG_DIR}/total_reach_hist.png", n - 1)
     histogram(mainT["exposure"], "Exposure (simulations in which the bank is distressed)", "Number of banks",
               f"{FIG_DIR}/exposure_hist.png", n - 1)
-    scatterPanels(mainT, f"{FIG_DIR}/centrality_vs_indirect.png")
     topBars(mainT, f"{FIG_DIR}/top10_direct_indirect.png")
     return files
 
@@ -813,7 +909,7 @@ def main():
     rq2Df.to_csv(RQ2_FILE, index=False)
     rq3Df.to_csv(RQ3_FILE, index=False)
 
-    figFiles = makeFigures(tables[("main", "base")])
+    figFiles = makeFigures(tables[("main", "base")], rq3Df[rq3Df["run"] == "main"])
     writeReport(tables, params, checks, refFacts, rq1Df, rq2Df, rq3Df, figFiles)
     print(f"\nSaved {RQ1_FILE}, {RQ2_FILE}, {RQ3_FILE}, figures to {FIG_DIR}/ and {REPORT_FILE}")
 
