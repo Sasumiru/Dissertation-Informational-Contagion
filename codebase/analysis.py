@@ -447,7 +447,7 @@ def makeFigures(mainT):
 def gitInfo():
     try:
         commit = subprocess.run(["git", "rev-parse", "HEAD"], capture_output=True, text=True).stdout.strip()
-        dirty = subprocess.run(["git", "status", "--porcelain", "--", "codebase"], capture_output=True,
+        dirty = subprocess.run(["git", "status", "--porcelain", "--untracked-files=no", "--", "codebase"], capture_output=True, #pycache isnt a code change
                                text=True).stdout.strip()
         branch = subprocess.run(["git", "rev-parse", "--abbrev-ref", "HEAD"], capture_output=True,
                                 text=True).stdout.strip()
