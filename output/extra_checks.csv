@@ -1,0 +1,11 @@
+check,value,detail
+zero_reach_equals_no_lookalike,1.0,"23 zero reach banks, 23 with no match above similarity 0.9336, 23 in both"
+median_similarity_with_real_estate,0.6507613801574933,should match s0 in run_parameters.csv
+median_similarity_without_real_estate,0.6835612389322406,"real estate dropped, shares re-normalised"
+real_estate_share_min,0.0060431351632185,
+real_estate_share_max,0.975372485559719,
+cascading_rho_direct_vs_indirect,-0.2895198838904328,"n = 84, p 0.008"
+cascading_partial_weighted_degree,0.5155312932268045,"n = 84, p <0.001"
+cascading_partial_eigenvector,0.32287251708019615,"n = 84, p 0.003"
+cascading_partial_pagerank,0.544719621094836,"n = 84, p <0.001"
+cascading_partial_betweenness,0.32229372832302755,"n = 84, p 0.003"
