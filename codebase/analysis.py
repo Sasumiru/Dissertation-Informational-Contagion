@@ -18,17 +18,18 @@ RUNS = ["main"] + list(mr.ROBUSTNESS)
 FIG_DIR = "output/figures"
 
 # figure colours and ink
-BLUE = "#2a78d6"
+BLUE = "#1c4e9e"
 ORANGE = "#eb6834"
 INK = "#0b0b0b"
 MUTED = "#898781"
 GRID = "#e6e5e1"
 SHADE = "#efeeeb" #background band behind banks that are never hit
 NOTE_INK = "#52514e" #annotation text
-FIG_WIDTH = 6.5 #inches, fits the page width so text prints at its real size
+FIG_WIDTH = 5.8 #inches, fits the page width so text prints at its real size
 
 plt.rcParams.update({ #one style for every figure
-    "font.family": "DejaVu Sans",
+    "font.family": "serif",
+    "font.serif": ["Times New Roman", "Liberation Serif", "DejaVu Serif"],
     "font.size": 9,
     "axes.labelsize": 9,
     "axes.labelcolor": INK,
@@ -120,7 +121,7 @@ def makeFigures(mainT, rq3Main):
     ax.set_ylim(0, top * 1.06)
     ax.set_xticks([])
     ax.set_xlabel("Trigger banks, ordered from highest to lowest total reach")
-    ax.set_ylabel("Banks distressed")
+    ax.set_ylabel("Number of banks distressed")
     styleAxes(ax)
     ax.legend(frameon=False, loc="lower right", bbox_to_anchor=(1, 1), ncol=2, fontsize=8) #above the plot, clear of the band
     fig.tight_layout()
@@ -131,7 +132,7 @@ def makeFigures(mainT, rq3Main):
     e = mainT.sort_values(["exposure", "Name"], ascending=[False, True]).reset_index(drop=True)
     never = e["exposure"] == 0
     fig, ax = plt.subplots(figsize=(FIG_WIDTH, 3.0))
-    ax.bar(np.arange(n), e["exposure"], width=0.85, color=np.where(never, MUTED, BLUE))
+    ax.bar(np.arange(n), e["exposure"], width=0.85, color=np.where(never, MUTED, NOTE_INK))
     most = e.iloc[0]
     tiedTop = int((e["exposure"] == most["exposure"]).sum())
     if tiedTop > 1: #only name the bank if its the only one at the top
@@ -145,13 +146,13 @@ def makeFigures(mainT, rq3Main):
     nNever = int(never.sum())
     ax.axvspan(n - nNever - 0.5, n - 0.5, color=SHADE, lw=0)
     why = " with no strong links" if (e.loc[never, "weighted_degree"] == 0).all() else "" #weighted degree 0 = no strong links
-    ax.text(n - 0.5, (n - 1) * 0.87, f"Grey: {nNever} banks{why},\nnever distressed", fontsize=8, color=NOTE_INK,
+    ax.text(n - nNever - 1.5, (n - 1) * 0.87, f"Shaded: {nNever} banks{why},\nnever distressed", fontsize=8, color=NOTE_INK,
             ha="right", va="top")
-    ax.set_xlim(-1, n + 0.5)
+    ax.set_xlim(-1, n)
     ax.set_ylim(0, (n - 1) * 0.95)
     ax.set_xticks([])
     ax.set_xlabel("Banks, ordered from most to least exposed")
-    ax.set_ylabel("Simulations in which\nthe bank is distressed")
+    ax.set_ylabel("Number of simulations in which\nthe bank is distressed")
     styleAxes(ax)
     fig.tight_layout()
     fig.savefig(f"{FIG_DIR}/fig4_2_exposure_all_banks.png", dpi=300, facecolor="white")
@@ -162,7 +163,7 @@ def makeFigures(mainT, rq3Main):
     zero = mainT["indirect_reach"] == 0
     fig, axes = plt.subplots(2, 2, figsize=(FIG_WIDTH, 5.2))
     for ax, cent in zip(axes.flat, order):
-        ax.scatter(mainT.loc[~zero, cent], mainT.loc[~zero, "indirect_reach"], s=14, color=BLUE, alpha=0.85,
+        ax.scatter(mainT.loc[~zero, cent], mainT.loc[~zero, "indirect_reach"], s=14, color=ORANGE, alpha=0.85,
                    lw=0, label="Indirect reach > 0")
         ax.scatter(mainT.loc[zero, cent], mainT.loc[zero, "indirect_reach"], s=14, facecolor="none",
                    edgecolor=MUTED, lw=0.7, label="Indirect reach = 0")
@@ -175,7 +176,7 @@ def makeFigures(mainT, rq3Main):
         ax.xaxis.set_major_locator(MaxNLocator(4))
         styleAxes(ax)
     for ax in axes[:, 0]:
-        ax.set_ylabel("Indirect reach (banks)")
+        ax.set_ylabel("Indirect reach (number of banks)")
     handles, labels = axes[0, 0].get_legend_handles_labels()
     fig.legend(handles, labels, loc="upper center", ncol=2, frameon=False, fontsize=8)
     fig.tight_layout(rect=(0, 0, 1, 0.95))
