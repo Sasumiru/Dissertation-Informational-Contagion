@@ -182,3 +182,9 @@ Each run changes one setting from the main spec. complete_centrality only change
 | cascading_partial_eigenvector | 0.3229 | n = 84, p 0.003 |
 | cascading_partial_pagerank | 0.5447 | n = 84, p <0.001 |
 | cascading_partial_betweenness | 0.3223 | n = 84, p 0.003 |
+| h1_all_mean_similarity_vs_total_reach | 0.7896 | n = 107, p <0.001 |
+| h1_all_n_strong_links_vs_total_reach | 0.7367 | n = 107, p <0.001 |
+| h1_all_max_similarity_vs_total_reach | 0.4500 | n = 107, p <0.001 |
+| h1_cascading_mean_similarity_vs_total_reach | 0.8452 | n = 84, p <0.001 |
+| h1_cascading_n_strong_links_vs_total_reach | 0.5246 | n = 84, p <0.001 |
+| h1_cascading_max_similarity_vs_total_reach | -0.1227 | n = 84, p 0.266 |

@@ -85,6 +85,17 @@ def main():
         r, pp, n = partialSpearman(casc, cent, "indirect_reach", CONTROLS)
         rows.append({"check": f"cascading_partial_{cent}", "value": r, "detail": f"n = {n}, p {fmtP(pp)}"})
 
+    # h1, similarity vs total reach
+    Sn = S.copy(); np.fill_diagonal(Sn, np.nan)
+    simStats = pd.DataFrame({"mean_similarity": np.nanmean(Sn, axis=1),
+                             "n_strong_links": (Sn >= p["strong_cutoff"]).sum(axis=1),
+                             "max_similarity": np.nanmax(Sn, axis=1)}, index=sim.index)
+    h1 = mainT.join(simStats)
+    for sub, tag in [(h1, "all"), (h1[h1["direct_reach"] > 0], "cascading")]:
+        for col in simStats.columns:
+            rho, pVal = stats.spearmanr(sub[col], sub["total_reach"])
+            rows.append({"check": f"h1_{tag}_{col}_vs_total_reach", "value": float(rho),
+                         "detail": f"n = {len(sub)}, p {fmtP(pVal)}"})
     # save results
     out = pd.DataFrame(rows)
     out.to_csv(OUT_FILE, index=False)
