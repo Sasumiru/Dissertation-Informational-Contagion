@@ -96,6 +96,15 @@ def main():
             rho, pVal = stats.spearmanr(sub[col], sub["total_reach"])
             rows.append({"check": f"h1_{tag}_{col}_vs_total_reach", "value": float(rho),
                          "detail": f"n = {len(sub)}, p {fmtP(pVal)}"})
+
+    # largest eigenvalue of the f(s) matrix on strong links only
+    strong = S >= p["strong_cutoff"] #diagonal of S is already 0 so never strong
+    W = F * strong
+    np.fill_diagonal(W, 0)
+    specRad = float(np.max(np.abs(np.linalg.eigvalsh(W)))) #W is symmetric
+    rows.append({"check": "spectral_radius_f_strong", "value": specRad,
+                 "detail": f"f(s) on {int(strong.sum() // 2)} strong links, zero diagonal"})
+
     # save results
     out = pd.DataFrame(rows)
     out.to_csv(OUT_FILE, index=False)
