@@ -188,3 +188,4 @@ Each run changes one setting from the main spec. complete_centrality only change
 | h1_cascading_mean_similarity_vs_total_reach | 0.8452 | n = 84, p <0.001 |
 | h1_cascading_n_strong_links_vs_total_reach | 0.5246 | n = 84, p <0.001 |
 | h1_cascading_max_similarity_vs_total_reach | -0.1227 | n = 84, p 0.266 |
+| spectral_radius_f_strong | 33.4726 | f(s) on 1418 strong links, zero diagonal |
